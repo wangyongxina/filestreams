@@ -1,0 +1,17 @@
+FileStreams.exe enum F:\1.txt
+
+FileStreams.exe create F:\1.txt test
+FileStreams.exe create F:\1.txt test1 $DATA
+
+FileStreams.exe delete F:\1.txt
+FileStreams.exe delete F:\1.txt test1
+FileStreams.exe delete F:\1.txt test1 $DATA
+
+FileStreams.exe write F:\1.txt test1 teststring
+FileStreams.exe write F:\1.txt test1 $DATA teststring
+
+FileStreams.exe append F:\1.txt testExe E:\tool\filetest\Win32\FileTest.exe
+FileStreams.exe append F:\1.txt testData F:\2.txt test
+
+FileStreams.exe launch F:\1.txt testExe
+FileStreams.exe launch F:\1.txt testExe $DATA

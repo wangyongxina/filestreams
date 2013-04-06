@@ -6,10 +6,8 @@
 #pragma once
 
 #include "targetver.h"
-
-#include <stdio.h>
+#include <cstdio>
+#include <cstdlib>
 #include <tchar.h>
-
-
-
-// TODO: reference additional headers your program requires here
+#include <windows.h>
+#include <string>
