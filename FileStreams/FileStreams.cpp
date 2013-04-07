@@ -572,6 +572,6 @@ LaunchFileStream(__in const TCHAR *PathString,
     }
     else
     {
-        _ftprintf_s(stderr, TEXT("launch %s failed : %d\n"), GetLastError());
+        _ftprintf_s(stderr, TEXT("launch %s failed : %d\n"), Path.c_str(), GetLastError());
     }
 }
