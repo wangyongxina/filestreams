@@ -29,6 +29,13 @@ LaunchFileStream(__in const TCHAR *Path,
                  __in const TCHAR *StreamType);
 
 void
+DumpFileStream(__in const TCHAR *Path,
+			   __in const TCHAR *StreamName,
+			   __in const TCHAR *StreamType,
+			   __in size_t Length,
+               __in size_t Offset);
+
+void
 OutputCommandSupport()
 {
     _tprintf_s(TEXT("---- Commands Supported ----\n"));
@@ -37,8 +44,9 @@ OutputCommandSupport()
     _tprintf_s(TEXT("enum        Enumerate file streams\n"));
     _tprintf_s(TEXT("delete      Delete file stream\n"));
     _tprintf_s(TEXT("write       Write to file stream\n"));
-    _tprintf_s(TEXT("append      Append a file to stream"));
-    _tprintf_s(TEXT("launch      Start process from file stream"));
+    _tprintf_s(TEXT("append      Append a file to stream\n"));
+    _tprintf_s(TEXT("launch      Start process from file stream\n"));
+	_tprintf_s(TEXT("dump		 Dump file stream"));
 }
 
 void
@@ -573,5 +581,85 @@ LaunchFileStream(__in const TCHAR *PathString,
     else
     {
         _ftprintf_s(stderr, TEXT("launch %s failed : %d\n"), Path.c_str(), GetLastError());
+    }
+}
+
+void
+DumpFileStream(__in const TCHAR *PathString,
+               __in const TCHAR *StreamName,
+               __in const TCHAR *StreamType,
+               __in size_t Length,
+               __in size_t Offset)
+{
+	std::wstring Path = FormatPath(PathString, StreamName, StreamType);
+
+	auto_handle file_handle(CreateFile(Path.c_str(),
+                                       GENERIC_READ,
+                                       FILE_SHARE_READ,
+                                       nullptr,
+                                       OPEN_EXISTING,
+                                       0,
+                                       nullptr));
+
+    if (file_handle.get() == INVALID_HANDLE_VALUE)
+    {
+        _ftprintf_s(stderr, TEXT("Open file for read failed : %d\n"), GetLastError());
+        return;
+    }
+
+    if (Length == 0)
+    {
+        LARGE_INTEGER FileLength;
+
+        if (!GetFileSizeEx(file_handle.get(), &FileLength))
+        {
+            _ftprintf_s(stderr, TEXT("Get file size failed : %d\n"), GetLastError());
+            return;
+        }
+
+        Length = FileLength.LowPart;
+    }
+
+    if (Offset != 0)
+    {
+        if (!SetFilePointer(file_handle.get(), Offset, nullptr, FILE_BEGIN))
+        {
+            _ftprintf_s(stderr, TEXT("Set file pointer failed : %d\n"), GetLastError());
+            return;
+        }
+    }
+
+    std::unique_ptr<BYTE[]> ReadBuffer(new BYTE[Length]);
+    DWORD NumberOfBytesRead = 0;
+
+    BOOL fOk = ReadFile(file_handle.get(),
+                        ReadBuffer.get(),
+                        (DWORD)Length,
+                        &NumberOfBytesRead,
+                        nullptr);
+
+    if (!fOk || !NumberOfBytesRead)
+    {
+        _ftprintf_s(stderr, TEXT("Read file failed : %d\n"), GetLastError());
+        return;
+    }
+
+    _tprintf_s(TEXT("Stream content:\n"));
+
+    TCHAR   Buffer[128] = { 0 };
+    PBYTE   ShowBuffer  = ReadBuffer.get();
+
+    for (DWORD i = 0; i < NumberOfBytesRead; i += 16)
+    {
+        ShowBuffer  += i;
+        Offset      += i;
+
+        _stprintf_s(Buffer,
+                    TEXT("%04d %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X"),
+                    Offset,
+                    ShowBuffer[0], ShowBuffer[1], ShowBuffer[2], ShowBuffer[3], ShowBuffer[4], ShowBuffer[5], ShowBuffer[6], ShowBuffer[7],
+                    ShowBuffer[8], ShowBuffer[9], ShowBuffer[0xA], ShowBuffer[0xB], ShowBuffer[0xC], ShowBuffer[0xD], ShowBuffer[0xE], ShowBuffer[0xF]);
+
+        _tprintf_s(Buffer);
     }
 }

@@ -15,3 +15,6 @@ FileStreams.exe append F:\1.txt testData F:\2.txt test
 
 FileStreams.exe launch F:\1.txt testExe
 FileStreams.exe launch F:\1.txt testExe $DATA
+
+FileStreams.exe dump F:\1.txt test 10 0
+FileStreams.exe dump F:\1.txt test $DATA 10 0
