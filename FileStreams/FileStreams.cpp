@@ -88,18 +88,18 @@ OnCreate(int argc, TCHAR* argv[])
     if (argc == 4)
     {
         CreateOrWriteFileStream(argv[2],
-                         argv[3],
-                         nullptr,
-                         nullptr);
+                                argv[3],
+                                nullptr,
+                                nullptr);
 
         return 0;
     }
     else if (argc == 5)
     {
         CreateOrWriteFileStream(argv[2],
-                         argv[3],
-                         argv[5],
-                         nullptr);
+                                argv[3],
+                                argv[4],
+                                nullptr);
 
         return 0;
     }
@@ -263,6 +263,55 @@ OnLaunch(int argc, TCHAR* argv[])
     }
 }
 
+void
+OnDumpHelp() 
+{
+    _tprintf_s(TEXT("Usage : FileStreams.exe dump <volume pathname> <stream name> <stream type> <Length> <Offset>\n")
+               TEXT("   Eg : FileStreams.exe dump F:\\1.txt test 10\n")
+               TEXT("   Eg : FileStreams.exe dump F:\\1.txt test 10	 0\n")
+               TEXT("   Eg : FileStreams.exe dump F:\\1.txt test $DATA 10		0\n"));
+}
+
+int
+OnDump(int argc, TCHAR* argv[]) 
+{
+    if (argc == 5)
+    {
+        DumpFileStream(argv[2],
+                       argv[3],
+                       nullptr,
+                       _wtoi(argv[4]),
+                       0);
+
+        return 0;
+    }
+    else if (argc == 6)
+    {
+        DumpFileStream(argv[2],
+                       argv[3],
+                       nullptr,
+                       _wtoi(argv[4]),
+                       _wtoi(argv[5]));
+
+        return 0;
+    }
+    else if (argc == 7)
+    {
+        DumpFileStream(argv[2],
+                       argv[3],
+                       argv[4],
+                       _wtoi(argv[5]),
+                       _wtoi(argv[6]));
+
+        return 0;
+    }
+    else
+    {
+        OnDumpHelp();
+        return -1;
+    }
+}
+
 int _tmain(int argc, _TCHAR* argv[])
 {
     if (argc == 1)
@@ -296,6 +345,10 @@ int _tmain(int argc, _TCHAR* argv[])
     else if (_tcsicmp(Command, TEXT("launch")) == 0)
     {
         return OnLaunch(argc, argv);
+    }
+    else if (_tcsicmp(Command, TEXT("dump")) == 0)
+    {
+        return OnDump(argc, argv);
     }
     else
     {
@@ -584,6 +637,19 @@ LaunchFileStream(__in const TCHAR *PathString,
     }
 }
 
+UCHAR
+ToPrintChar(__in BYTE aChar)
+{
+    if (isprint(aChar))
+    {
+        return (UCHAR)aChar;
+    }
+    else
+    {
+        return '.';
+    }
+}
+
 void
 DumpFileStream(__in const TCHAR *PathString,
                __in const TCHAR *StreamName,
@@ -646,20 +712,67 @@ DumpFileStream(__in const TCHAR *PathString,
 
     _tprintf_s(TEXT("Stream content:\n"));
 
-    TCHAR   Buffer[128] = { 0 };
-    PBYTE   ShowBuffer  = ReadBuffer.get();
+    TCHAR   Buffer[512]     = { 0 };
+    PBYTE   ShowBuffer      = ReadBuffer.get();
+    DWORD   Remaining       = 0;
+    DWORD   CurrentOffset   = Offset;
 
-    for (DWORD i = 0; i < NumberOfBytesRead; i += 16)
+    Remaining           = NumberOfBytesRead % 16;
+    NumberOfBytesRead  -= Remaining;
+
+    if (NumberOfBytesRead >= 16)
     {
-        ShowBuffer  += i;
-        Offset      += i;
+        for (DWORD i = 0; i < NumberOfBytesRead; i += 16)
+        {
+            ShowBuffer      = ReadBuffer.get() + i;
+            CurrentOffset   = Offset + i;
 
-        _stprintf_s(Buffer,
-                    TEXT("%04d %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X"),
-                    Offset,
-                    ShowBuffer[0], ShowBuffer[1], ShowBuffer[2], ShowBuffer[3], ShowBuffer[4], ShowBuffer[5], ShowBuffer[6], ShowBuffer[7],
-                    ShowBuffer[8], ShowBuffer[9], ShowBuffer[0xA], ShowBuffer[0xB], ShowBuffer[0xC], ShowBuffer[0xD], ShowBuffer[0xE], ShowBuffer[0xF]);
+            _stprintf_s(Buffer,
+                        TEXT("0x%04X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X ")
+                        TEXT("%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c\n"),
+                        CurrentOffset,
+                        ShowBuffer[0], ShowBuffer[1], ShowBuffer[2], ShowBuffer[3], ShowBuffer[4], ShowBuffer[5], ShowBuffer[6], ShowBuffer[7],
+                        ShowBuffer[8], ShowBuffer[9], ShowBuffer[0xA], ShowBuffer[0xB], ShowBuffer[0xC], ShowBuffer[0xD], ShowBuffer[0xE], ShowBuffer[0xF],
+                        ToPrintChar(ShowBuffer[0]), ToPrintChar(ShowBuffer[1]), ToPrintChar(ShowBuffer[2]), ToPrintChar(ShowBuffer[3]),
+                        ToPrintChar(ShowBuffer[4]), ToPrintChar(ShowBuffer[5]), ToPrintChar(ShowBuffer[6]), ToPrintChar(ShowBuffer[7]),
+                        ToPrintChar(ShowBuffer[8]), ToPrintChar(ShowBuffer[9]), ToPrintChar(ShowBuffer[10]), ToPrintChar(ShowBuffer[11]),
+                        ToPrintChar(ShowBuffer[12]), ToPrintChar(ShowBuffer[13]), ToPrintChar(ShowBuffer[14]), ToPrintChar(ShowBuffer[15]));
 
-        _tprintf_s(Buffer);
+            _tprintf_s(Buffer);
+        }
+
+        ShowBuffer      = ReadBuffer.get() + NumberOfBytesRead;
+        CurrentOffset   = Offset + NumberOfBytesRead;
     }
+
+    if (Remaining != 0)
+    {
+        _stprintf_s(Buffer, TEXT("0x%04X "), CurrentOffset);
+        _tprintf_s(Buffer);
+
+        for (DWORD i = 0; i < Remaining; ++i)
+        {
+            _stprintf_s(Buffer,
+                        TEXT("%02X "),
+                        ShowBuffer[i]);
+
+            _tprintf_s(Buffer);
+        }
+
+        for (DWORD i = 0; i < 16 - Remaining; ++i)
+        {
+            _tprintf_s(TEXT("   "));
+        }
+
+        for (DWORD i = 0; i < Remaining; ++i)
+        {
+            _stprintf_s(Buffer,
+                        TEXT("%c"),
+                        ToPrintChar(ShowBuffer[i]));
+
+            _tprintf_s(Buffer);
+        }
+    }
+
+    _tprintf_s(TEXT("\n"));
 }
