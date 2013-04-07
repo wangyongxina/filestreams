@@ -8,4 +8,4 @@ Support feature:
 	6. Start process from file stream
 	7. Dump file stream
 
-You can download a precompiled executable file from filestreams/Release
+You can download a precompiled executable file from filestreams/Release!
