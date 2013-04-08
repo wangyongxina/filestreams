@@ -46,7 +46,7 @@ OutputCommandSupport()
     _tprintf_s(TEXT("write       Write to file stream\n"));
     _tprintf_s(TEXT("append      Append a file to stream\n"));
     _tprintf_s(TEXT("launch      Start process from file stream\n"));
-	_tprintf_s(TEXT("dump		 Dump file stream"));
+	_tprintf_s(TEXT("dump        Dump file stream\n"));
 }
 
 void
